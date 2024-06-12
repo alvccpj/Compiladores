@@ -1,101 +1,115 @@
+
 import java.util.*;
 
 public class AnalisadorSintatico {
 
     public static boolean verificarEstrutura(String codigoFonte) {
-        List<String> tokens = Arrays.asList(codigoFonte.split("\\s+"));
-        ListIterator<String> it = tokens.listIterator();
-        boolean ocorreuExcecao = false;
-
-        if (it != null) {
-            while (it.hasNext()) {
-                analisarToken(it);
-            }
-        } else {
-            ocorreuExcecao = true;
-        }
-
-        if (ocorreuExcecao) {
-            System.err.println("Ocorreu uma exceção durante a análise da estrutura.");
-        }
-
-        return !ocorreuExcecao;
-    }
-
-    private static void analisarToken(ListIterator<String> it) {
-        if (!it.hasNext())
-            return;
-        String token = it.next();
-
-        if (token.equals("int") || token.equals("float") || token.equals("double") ||
-                token.equals("char") || token.equals("boolean")) {
-            analisarDeclaracao(it, token);
-        } else if (token.equals("struct")) {
-            analisarEstrutura(it);
-        } else if (token.equals("//")) {
-            ignorarComentarioLinha(it);
-        } else if (token.equals("/*")) {
-            ignorarComentarioBloco(it);
-        } else if (token.equals("if") || token.equals("while") || token.equals("for") ||
-                token.equals("switch") || token.equals("return") || token.equals("break") ||
-                token.equals("continue")) {
-            analisarControle(it, token);
-        } else {
-            if (!token.endsWith(";")) {
-                throw new RuntimeException("Declaração inválida: " + token);
-            }
+        try {
+            List<String> tokens = Arrays.asList(codigoFonte.split("\\s+"));
+            ListIterator<String> it = tokens.listIterator();
+            programa(it);
+            return !it.hasNext(); 
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
         }
     }
 
-    private static void analisarDeclaracao(ListIterator<String> it, String tipo) {
-        if (!it.hasNext())
-            return;
-        String id = it.next();
-        if (!id.matches("[a-zA-Z_]\\w*")) {
-            throw new RuntimeException("Declaração de variável ou função inválida");
-        }
-        if (it.hasNext()) {
-            String proxToken = it.next();
-            if (proxToken.equals("=")) {
-                analisarExpressao(it);
-                if (!it.next().equals(";")) {
-                    throw new RuntimeException("Falta ponto e vírgula após a atribuição");
-                }
-            } else if (proxToken.equals("(")) {
-                analisarParametros(it);
-                if (!it.next().equals(")")) {
-                    throw new RuntimeException("Falta fechar parênteses após os parâmetros");
-                }
-                analisarBloco(it);
-            } else if (!proxToken.equals(";")) {
-                throw new RuntimeException("Declaração inválida");
-            }
-        }
-    }
-
-    private static void analisarEstrutura(ListIterator<String> it) {
-        // Implementação da análise de estrutura
-        if (!it.hasNext())
-            return;
-        String id = it.next();
-        if (!id.matches("[a-zA-Z_]\\w*")) {
-            throw new RuntimeException("Declaração de estrutura inválida");
-        }
-        if (!it.hasNext() || !it.next().equals("{")) {
-            throw new RuntimeException("Falta abrir chaves após a declaração da estrutura");
-        }
+    private static void programa(ListIterator<String> it) {
         while (it.hasNext()) {
-            String token = it.next();
-            if (token.equals("}")) {
-                return;
-            }
-            analisarDeclaracao(it, token);
+            declaracao(it);
         }
-        throw new RuntimeException("Falta fechar chaves após a declaração da estrutura");
     }
 
-    private static void analisarParametros(ListIterator<String> it) {
-        // Implementação da análise de parâmetros
+    private static void declaracao(ListIterator<String> it) {
+        if (it.hasNext()) {
+            String token = it.next();
+            switch (token) {
+                case "int":
+                case "float":
+                case "double":
+                case "char":
+                case "boolean":
+                    declaracaoVariavelOuFuncao(it, token);
+                    break;
+                case "struct":
+                    declaracaoEstrutura(it);
+                    break;
+                case "//":
+                    comentarioLinha(it);
+                    break;
+                case "/*":
+                    comentarioBloco(it);
+                    break;
+                case "if":
+                case "while":
+                case "for":
+                case "switch":
+                case "return":
+                case "break":
+                case "continue":
+                    estruturaControle(it, token);
+                    break;
+                default:
+                    if (token.endsWith(";")) {
+                        // Declaração inválida
+                        throw new RuntimeException("Declaração inválida: " + token);
+                    }
+                    break;
+            }
+        }
+    }
+
+    private static void declaracaoVariavelOuFuncao(ListIterator<String> it, String tipo) {
+        if (it.hasNext()) {
+            String id = it.next();
+            if (id.matches("[a-zA-Z_]\\w*")) {
+                if (it.hasNext()) {
+                    String nextToken = it.next();
+                    if (nextToken.equals(";")) {
+                        // Declaração de variável sem atribuição
+                        return;
+                    } else if (nextToken.equals("=")) {
+                        // Declaração de variável com atribuição
+                        expressao(it);
+                        if (it.hasNext() && it.next().equals(";")) {
+                            return;
+                        } else {
+                            throw new RuntimeException("Falta ponto e vírgula após a atribuição");
+                        }
+                    } else if (nextToken.equals("(")) {
+                        // Declaração de função
+                        parametros(it);
+                        if (it.next().equals(")")) {
+                            bloco(it);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+        throw new RuntimeException("Declaração de variável ou função inválida");
+    }
+    
+    private static void declaracaoEstrutura(ListIterator<String> it) {
+        if (it.hasNext()) {
+            String id = it.next();
+            if (id.matches("[a-zA-Z_]\\w*")) {
+                if (it.next().equals("{")) {
+                    while (it.hasNext()) {
+                        String token = it.next();
+                        if (token.equals("}")) {
+                            return;
+                        }
+                        declaracao(it);
+                    }
+                }
+            }
+        }
+        throw new RuntimeException("Declaração de estrutura inválida");
+    }
+
+    private static void parametros(ListIterator<String> it) {
         while (it.hasNext()) {
             String tipo = it.next();
             if (!tipo.matches("(int|float|double|char|boolean)")) {
@@ -108,55 +122,48 @@ public class AnalisadorSintatico {
             if (it.hasNext()) {
                 String token = it.next();
                 if (token.equals(")")) {
-                    it.previous();
+                    it.previous(); // Regressa um passo para não consumir ')'
                     return;
                 } else if (!token.equals(",")) {
                     throw new RuntimeException("Erro na declaração de parâmetros");
                 }
             }
         }
-        throw new RuntimeException("Falta fechar parênteses após os parâmetros");
     }
 
-    private static void analisarBloco(ListIterator<String> it) {
-        // Implementação da análise de bloco
-        if (!it.hasNext() || !it.next().equals("{")) {
-            throw new RuntimeException("Falta abrir chaves no bloco");
-        }
-        while (it.hasNext()) {
-            String token = it.next();
-            if (token.equals("}")) {
-                return;
+    private static void bloco(ListIterator<String> it) {
+        if (it.next().equals("{")) {
+            while (it.hasNext()) {
+                String token = it.next();
+                if (token.equals("}")) {
+                    return;
+                }
+                it.previous(); // Regressa um passo para não consumir o próximo token
+                declaracao(it);
             }
-            it.previous();
-            analisarDeclaracao(it, token);
         }
-        throw new RuntimeException("Falta fechar chaves no bloco");
+        throw new RuntimeException("Erro na estrutura do bloco");
     }
 
-    private static void ignorarComentarioLinha(ListIterator<String> it) {
-        // Implementação da análise de comentário de linha
+    private static void comentarioLinha(ListIterator<String> it) {
         while (it.hasNext()) {
             String token = it.next();
             if (token.contains("\n")) {
-                return;
+                break;
             }
         }
     }
 
-    private static void ignorarComentarioBloco(ListIterator<String> it) {
-        // Implementação da análise de comentário de bloco
+    private static void comentarioBloco(ListIterator<String> it) {
         while (it.hasNext()) {
             String token = it.next();
             if (token.equals("*/")) {
-                return;
+                break;
             }
         }
-        throw new RuntimeException("Falta fechar comentário de bloco");
     }
 
-    private static void analisarExpressao(ListIterator<String> it) {
-        // Implementação da análise de expressão
+    private static void expressao(ListIterator<String> it) {
         while (it.hasNext()) {
             String token = it.next();
             if (token.equals(";")) {
@@ -169,34 +176,29 @@ public class AnalisadorSintatico {
         }
     }
 
-    private static void analisarControle(ListIterator<String> it, String tipo) {
-        // Implementação da análise de estruturas de controle
+    private static void estruturaControle(ListIterator<String> it, String tipo) {
         if (tipo.equals("if") || tipo.equals("while") || tipo.equals("for") || tipo.equals("switch")) {
-            if (!it.hasNext() || !it.next().equals("(")) {
-                throw new RuntimeException("Falta abrir parênteses na estrutura de controle");
+            if (it.next().equals("(")) {
+                expressao(it);
+                if (it.next().equals(")")) {
+                    bloco(it);
+                    if (tipo.equals("if") && it.hasNext() && it.next().equals("else")) {
+                        bloco(it);
+                    }
+                    return;
+                }
             }
-            analisarExpressao(it);
-            if (!it.next().equals(")")) {
-                throw new RuntimeException("Falta fechar parênteses na estrutura de controle");
-            }
-            analisarBloco(it);
-            if (tipo.equals("if") && it.hasNext() && it.next().equals("else")) {
-                analisarBloco(it);
-            }
-            return;
         } else if (tipo.equals("return")) {
             if (it.hasNext()) {
-                analisarExpressao(it);
+                expressao(it);
             }
-            if (!it.next().equals(";")) {
-                throw new RuntimeException("Falta ponto e vírgula no retorno");
+            if (it.next().equals(";")) {
+                return;
             }
-            return;
         } else if (tipo.equals("break") || tipo.equals("continue")) {
-            if (!it.next().equals(";")) {
-                throw new RuntimeException("Falta ponto e vírgula no " + tipo);
+            if (it.next().equals(";")) {
+                return;
             }
-            return;
         }
         throw new RuntimeException("Estrutura de controle inválida");
     }
