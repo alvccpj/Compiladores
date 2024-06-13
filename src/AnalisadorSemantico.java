@@ -1,4 +1,5 @@
 import java.util.*;
+import java.util.regex.*;
 
 public class AnalisadorSemantico {
 
@@ -36,6 +37,59 @@ public class AnalisadorSemantico {
             return false;
         }
     }
+// Método para verificar a atribuição de valores a variáveis
+private static boolean validarAtribuicao(ListIterator<String> it) {
+    if (it.hasNext()) {
+        String identificador = it.next();
+        if (identificador.matches("[a-zA-Z_]\\w*")) {
+            if (it.hasNext() && it.next().equals("=")) {
+                if (!validarExpressao(it)) {
+                    return false;
+                }
+                if (!it.hasNext() || !";".equals(it.next())) {
+                    return false;
+                }
+                return true;
+            }
+        }
+    }
+    return false;
+}
+public static boolean validarAtribuicao(String codigo) {
+    try {
+        List<String> elementos = Arrays.asList(codigo.split("\\s+"));
+        ListIterator<String> iterador = elementos.listIterator();
+
+        while (iterador.hasNext()) {
+            String elemento = iterador.next();
+            if (isTipo(elemento)) {
+                if (!validarDeclaracaoVarOuFunc(iterador, elemento)) {
+                    return false;
+                }
+            } else if (elemento.equals("struct")) {
+                if (!validarDeclaracaoStruct(iterador)) {
+                    return false;
+                }
+            } else if (elemento.equals("//")) {
+                pularComentarioLinha(iterador);
+            } else if (elemento.equals("/*")) {
+                pularComentarioBloco(iterador);
+            } else if (elemento.endsWith(";")) {
+                // Lógica para declaração de variável
+            } else {
+                // Verificar atribuição
+                if (!validarAtribuicao(iterador)) {
+                    throw new RuntimeException("Atribuição inválida: " + elemento);
+                }
+            }
+        }
+
+        return true;
+    } catch (Exception e) {
+        e.printStackTrace();
+        return false;
+    }
+}
 
     // Método para verificar a declaração de variáveis ou funções
     private static boolean validarDeclaracaoVarOuFunc(ListIterator<String> it, String tipo) {
@@ -105,6 +159,12 @@ public class AnalisadorSemantico {
     private static boolean tiposCompativeis(String tipo1, String tipo2, String operador) {
         if (operador.matches("[+\\-*/%]")) {
             return tipo1.equals("int") && tipo2.equals("int");
+        } else if (operador.equals("+")) {
+            // Sobrecarga para o operador de adição
+            return tipo1.equals("int") && tipo2.equals("int") ||
+                    tipo1.equals("float") && tipo2.equals("float") ||
+                    tipo1.equals("int") && tipo2.equals("float") ||
+                    tipo1.equals("float") && tipo2.equals("int");
         } else {
             return false;
         }
@@ -114,6 +174,19 @@ public class AnalisadorSemantico {
     private static String inferirTipoResultado(String tipo1, String tipo2, String operador) {
         if (operador.matches("[+\\-*/%]")) {
             return "int";
+        } else if (operador.equals("+")) {
+            // Sobrecarga para o operador de adição
+            if (tipo1.equals("int") && tipo2.equals("int")) {
+                return "int";
+            } else if (tipo1.equals("float") && tipo2.equals("float")) {
+                return "float";
+            } else if (tipo1.equals("int") && tipo2.equals("float")) {
+                return "float";
+            } else if (tipo1.equals("float") && tipo2.equals("int")) {
+                return "float";
+            } else {
+                return null; 
+            }
         } else {
             return null;
         }
@@ -149,7 +222,7 @@ public class AnalisadorSemantico {
                 return false;
             }
             if (it.hasNext()) {
-                String token = it.next();
+                String token = it.next(); // Aqui declara e usa o token
                 if (token.equals(")")) {
                     it.previous();
                     return true;
@@ -243,4 +316,7 @@ public class AnalisadorSemantico {
         }
         return true;
     }
+
+
+
 }

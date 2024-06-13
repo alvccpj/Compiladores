@@ -3,6 +3,7 @@ import java.util.regex.*;
 
 public class AnalisadorLexico {
 
+    // Lista dos tipos de tokens que serão identificados
     private static final List<String> tipos = Arrays.asList(
             "COMENTARIO",
             "NUM_DEC",
@@ -13,19 +14,21 @@ public class AnalisadorLexico {
             "ID",
             "TEXTO");
 
+    // Expressões regulares para identificar cada tipo de token
     private static final List<String> expressoes = Arrays.asList(
-            "//.*",
-            "\\b\\d+\\.\\d+\\b",
-            "\\b\\d+\\b",
-            "\\b(int|float|char|boolean|void|if|else|for|while|scanf|println|main|return)\\b",
-            "(\\+|\\-|\\*|\\/|\\%|==|=|!=|>=|<=|>|<|&&|\\|\\|)",
-            "(\\(|\\)|\\[|\\]|\\{|\\}|,|;)",
-            "\\b[a-zA-Z_]\\w*\\b",
-            "\".*?\"");
+            "//.*",                                             // Comentário
+            "\\b\\d+\\.\\d+\\b",                                 // Número decimal
+            "\\b\\d+\\b",                                       // Número inteiro
+            "\\b(int|float|char|boolean|void|if|else|for|while|scanf|println|main|return)\\b", // Palavras reservadas
+            "(\\+|\\-|\\*|\\/|\\%|==|=|!=|>=|<=|>|<|&&|\\|\\|)",  // Operadores
+            "(\\(|\\)|\\[|\\]|\\{|\\}|,|;)",                      // Símbolos especiais
+            "\\b[a-zA-Z_]\\w*\\b",                               // Identificadores (variáveis, funções, etc.)
+            "\".*?\"");                                          // Texto entre aspas
 
+    // Método para identificar os tokens no código fonte
     static List<Token> identificarTokens(String codigoFonte) {
         List<Token> tokens = new ArrayList<>();
-        Set<Integer> posicoes = new HashSet<>();
+        Set<Integer> posicoes = new HashSet<>(); // Conjunto para controlar as posições já analisadas
 
         for (int i = 0; i < expressoes.size(); i++) {
             String tipo = tipos.get(i);
@@ -33,9 +36,10 @@ public class AnalisadorLexico {
             Matcher matcher = Pattern.compile(expressao).matcher(codigoFonte);
 
             while (matcher.find()) {
-                if (!posicoes.contains(matcher.start())) {
+                if (!posicoes.contains(matcher.start())) { // Verifica se a posição já foi analisada
                     tokens.add(new Token(tipo, matcher.group(), matcher.start()));
 
+                    // Marca as posições ocupadas pelo token na fonte
                     for (int j = matcher.start(); j < matcher.end(); j++) {
                         posicoes.add(j);
                     }
@@ -43,10 +47,11 @@ public class AnalisadorLexico {
             }
         }
 
-        tokens.sort(Comparator.comparingInt(Token::getPosicao));
+        tokens.sort(Comparator.comparingInt(Token::getPosicao)); // Ordena os tokens por posição
         return tokens;
     }
 
+    // Método principal que realiza a análise léxica
     public static boolean realizarAnalise(String codigoFonte) {
         List<Token> tokens = identificarTokens(codigoFonte);
         for (int i = 0; i < tokens.size(); i++) {
@@ -56,6 +61,7 @@ public class AnalisadorLexico {
         return false;
     }
 
+    // Método de entrada para executar o analisador léxico
     public static void executarAnalisadorLexico() {
         String codigoFonte = "int main() {\n" +
                 "    int a = 10;\n" +
@@ -67,6 +73,7 @@ public class AnalisadorLexico {
         realizarAnalise(codigoFonte);
     }
 
+    // Classe interna para representar um Token
     static class Token {
         private final String tipo;
         private final String valor;

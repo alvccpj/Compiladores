@@ -14,7 +14,7 @@ public class Main {
         if (AnalisadorSintatico.verificarEstrutura(codigoFonte)) {
             System.out.println("Estrutura sintática correta!");
         } else {
-            System.out.println("Erro na estrutura sintática!");
+            System.out.println("Erro durante a análise sintática!");
         }
     }
 
@@ -23,7 +23,7 @@ public class Main {
     }
 
     public static void executarAnalisadorSemantico(String codigoFonte) {
-        if (AnalisadorSemantico.verificarTipagem(codigoFonte)) {
+        if (AnalisadorSemantico.validarTipos(codigoFonte)) {
             System.out.println("Tipagem correta!");
         } else {
             System.out.println("Erro na tipagem!");

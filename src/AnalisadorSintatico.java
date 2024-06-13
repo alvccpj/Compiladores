@@ -32,8 +32,14 @@ public class AnalisadorSintatico {
             ignorarComentario(iterador, token);
         } else if (isControleFluxo(token)) {
             analisarControle(iterador, token);
+        } else if ("int".equals(token) && iterador.hasNext() && "main".equals(iterador.next())) {
+            iterador.previous();
+            iterador.previous();
+            analisarFuncaoMain(iterador); // Ajustado para tratar a função main
         } else if (token.endsWith(";")) {
             throw new RuntimeException("Declaração inválida: " + token);
+        } else {
+            throw new RuntimeException("Token inesperado: " + token);
         }
     }
 
@@ -49,6 +55,7 @@ public class AnalisadorSintatico {
         return Arrays.asList("if", "while", "for", "switch", "return", "break", "continue").contains(token);
     }
 
+    // Método ajustado para analisar funções e variáveis
     private static void analisarVariavelOuFuncao(ListIterator<String> iterador, String tipo) {
         if (!iterador.hasNext()) {
             throw new RuntimeException("Identificador esperado após o tipo " + tipo);
@@ -122,13 +129,11 @@ public class AnalisadorSintatico {
                 throw new RuntimeException("Nome de parâmetro inválido: " + idParametro);
             }
 
-            if (!iterador.hasNext()) break;
-            String proximoToken = iterador.next();
-            if (")".equals(proximoToken)) {
+            if (iterador.hasNext() && ")".equals(iterador.next())) {
                 iterador.previous();  // Recuar para não consumir ')'
                 break;
-            } else if (!",".equals(proximoToken)) {
-                throw new RuntimeException("Erro na declaração de parâmetros, token inesperado: " + proximoToken);
+            } else if (!",".equals(iterador.previous())) {
+                throw new RuntimeException("Erro na declaração de parâmetros, token inesperado: " + iterador.next());
             }
         }
     }
@@ -223,5 +228,20 @@ public class AnalisadorSintatico {
             throw new RuntimeException("Estrutura de controle inválida: " + tipo);
         }
     }
+
+    private static void analisarFuncaoMain(ListIterator<String> iterador) {
+        if (!iterador.hasNext() || !"int".equals(iterador.next())) {
+            throw new RuntimeException("Esperado 'int' antes de 'main'");
+        }
+        if (!iterador.hasNext() || !"main".equals(iterador.next())) {
+            throw new RuntimeException("Esperado 'main' após 'int'");
+        }
+        if (!iterador.hasNext() || !"(".equals(iterador.next())) {
+            throw new RuntimeException("Esperado '(' após 'main'");
+        }
+        if (!iterador.hasNext() || !")".equals(iterador.next())) {
+            throw new RuntimeException("Esperado ')' após parâmetros de 'main'");
+        }
+        analisarBlocoCodigo(iterador);
+    }
 }
-//sintaticoF
